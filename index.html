@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: gap: content:">
     <title>俄罗斯方块 - PixiJS版</title>
     <style>
         body {
@@ -150,11 +151,32 @@
                 bottom: -120px;
             }
         }
+
+        /* 加载提示 */
+        #loadingMessage {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            z-index: 9999;
+        }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 
 <body>
-    <div id="gameContainer">
+    <div id="loadingMessage">
+        <div>🎮 俄罗斯方块加载中...</div>
+        <div style="font-size: 14px; margin-top: 10px;">请稍候</div>
+    </div>
+
+    <div id="gameContainer" class="hidden">
         <canvas id="gameCanvas"></canvas>
 
         <div id="scorePanel" class="ui-panel">
@@ -187,22 +209,89 @@
         </div>
     </div>
 
+    <!-- Cordova脚本 -->
+    <script type="text/javascript" src="cordova.js"></script>
+    
+    <!-- PixiJS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+    
     <script>
-        // 确保 PixiJS 加载完成后再启动游戏
-        window.addEventListener('load', () => {
+        console.log('页面开始加载...');
+        
+        // 错误处理
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('JavaScript错误:', msg, 'at', url, ':', line);
+            document.getElementById('loadingMessage').innerHTML = 
+                '<div style="color: #ff6b6b;">❌ 加载失败</div><div style="font-size: 12px; margin-top: 10px;">' + msg + '</div>';
+            return false;
+        };
+
+        // 检测运行环境
+        const isCordova = !!window.cordova;
+        const isOnline = navigator.onLine;
+        
+        console.log('运行环境:', isCordova ? 'Cordova应用' : '网页浏览器');
+        console.log('网络状态:', isOnline ? '在线' : '离线');
+
+        function initGame() {
+            console.log('开始初始化游戏...');
+            
+            // 检查PixiJS是否加载
             if (typeof PIXI === 'undefined') {
                 console.error('PixiJS 未能正确加载');
-                document.body.innerHTML = '<div style="text-align:center;padding:50px;color:white;">PixiJS 加载失败，请检查网络连接</div>';
+                document.getElementById('loadingMessage').innerHTML = 
+                    '<div style="color: #ff6b6b;">❌ PixiJS加载失败</div><div style="font-size: 12px; margin-top: 10px;">请检查网络连接</div>';
                 return;
             }
+            
             console.log('PixiJS 版本:', PIXI.VERSION);
-            // 延迟一点启动游戏，确保DOM完全准备好
+            
+            // 隐藏加载提示，显示游戏
+            document.getElementById('loadingMessage').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            
+            // 延迟启动游戏，确保DOM完全准备好
             setTimeout(() => {
-                new TetrisGame();
-            }, 100);
-        });
+                try {
+                    new TetrisGame();
+                    console.log('游戏启动成功！');
+                } catch (error) {
+                    console.error('游戏启动失败:', error);
+                    document.getElementById('loadingMessage').classList.remove('hidden');
+                    document.getElementById('loadingMessage').innerHTML = 
+                        '<div style="color: #ff6b6b;">❌ 游戏启动失败</div><div style="font-size: 12px; margin-top: 10px;">' + error.message + '</div>';
+                }
+            }, 500);
+        }
+
+        // 根据环境选择启动方式
+        if (isCordova) {
+            // Cordova环境：等待deviceready事件
+            console.log('等待Cordova设备就绪...');
+            document.addEventListener('deviceready', function() {
+                console.log('Cordova设备就绪！');
+                initGame();
+            }, false);
+            
+            // 超时保护：如果10秒内deviceready没有触发，强制启动
+            setTimeout(() => {
+                if (document.getElementById('gameContainer').classList.contains('hidden')) {
+                    console.warn('Cordova deviceready超时，强制启动游戏');
+                    initGame();
+                }
+            }, 10000);
+        } else {
+            // 浏览器环境：等待页面加载完成
+            console.log('浏览器环境，等待页面加载...');
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initGame);
+            } else {
+                initGame();
+            }
+        }
     </script>
+    
+    <!-- 游戏逻辑 -->
     <script src="game.js"></script>
 </body>
 
