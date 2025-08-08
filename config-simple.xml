@@ -25,10 +25,11 @@
         <allow-navigation href="https://cdn.jsdelivr.net/*" />
     </platform>
     
-    <!-- 基本设置 -->
+    <!-- 基本设置 - 降低SDK版本提高兼容性 -->
     <preference name="DisallowOverscroll" value="true" />
-    <preference name="android-minSdkVersion" value="24" />
-    <preference name="android-targetSdkVersion" value="34" />
+    <preference name="android-minSdkVersion" value="22" />
+    <preference name="android-targetSdkVersion" value="33" />
+    <preference name="android-compileSdkVersion" value="33" />
     <preference name="BackupWebStorage" value="none" />
     <preference name="Orientation" value="portrait" />
     <preference name="Fullscreen" value="false" />
@@ -47,10 +48,9 @@
     <preference name="android-installLocation" value="auto" />
     <preference name="AndroidLaunchMode" value="singleTop" />
     
-    <!-- 网络安全配置 -->
-    <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
-        <application android:usesCleartextTraffic="true" />
-    </edit-config>
+    <!-- Gradle设置 -->
+    <preference name="GradlePluginGoogleServicesEnabled" value="false" />
+    <preference name="GradlePluginGoogleServicesVersion" value="4.3.10" />
     
     <!-- 权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
