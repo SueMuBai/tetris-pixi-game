@@ -33,6 +33,14 @@ jobs:
         target: default
         arch: x86_64
       
+    - name: Accept Android SDK licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        
+    - name: Install required SDK packages
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+      
     - name: Install Cordova
       run: npm install -g cordova@12.0.0
       
@@ -44,48 +52,89 @@ jobs:
         cp ../game.js www/game.js
         cp ../config-simple.xml config.xml
         
-    - name: Add Android platform (specific version)
+    - name: Debug - List project structure before adding platform
+      run: |
+        echo "Project structure before adding platform:"
+        ls -la tetris-android/
+        echo "Config file content:"
+        cat tetris-android/config.xml
+        
+    - name: Add Android platform with error handling
       run: |
         cd tetris-android
-        cordova platform add android@12.0.1
+        echo "Adding Android platform..."
+        cordova platform add android@12.0.1 --verbose || {
+          echo "First attempt failed, trying without version..."
+          cordova platform add android --verbose || {
+            echo "Second attempt failed, trying to remove and re-add..."
+            cordova platform remove android || true
+            cordova platform add android --verbose
+          }
+        }
         
-    - name: Accept Android SDK licenses
+    - name: Debug - Check platform installation
       run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        cd tetris-android
+        echo "Installed platforms:"
+        cordova platform ls
+        echo "Android platform structure:"
+        ls -la platforms/ || echo "No platforms directory"
+        ls -la platforms/android/ || echo "No android platform directory"
+        ls -la platforms/android/app/ || echo "No app directory"
         
-    - name: Install required SDK packages
+    - name: Verify gradlew exists
       run: |
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+        cd tetris-android
+        if [ -f "platforms/android/gradlew" ]; then
+          echo "✅ gradlew found at platforms/android/gradlew"
+          chmod +x platforms/android/gradlew
+        elif [ -f "platforms/android/app/gradlew" ]; then
+          echo "✅ gradlew found at platforms/android/app/gradlew"
+          chmod +x platforms/android/app/gradlew
+        else
+          echo "❌ gradlew not found, listing all gradle files:"
+          find platforms/android -name "*gradle*" -type f || echo "No gradle files found"
+          echo "Trying to generate gradlew..."
+          cd platforms/android
+          gradle wrapper || echo "Gradle wrapper generation failed"
+        fi
         
-    - name: Set Gradle permissions
-      run: |
-        cd tetris-android/platforms/android
-        chmod +x gradlew
-        
-    - name: Build APK with specific Gradle version
+    - name: Build APK with enhanced error handling
       run: |
         cd tetris-android
         export GRADLE_OPTS="-Xmx4g -Dorg.gradle.daemon=false"
-        cordova build android --debug --verbose --gradleArg="--warning-mode=all"
+        echo "Starting Cordova build..."
+        cordova build android --debug --verbose --gradleArg="--warning-mode=all" || {
+          echo "Build failed, trying alternative approach..."
+          cd platforms/android
+          if [ -f "gradlew" ]; then
+            ./gradlew assembleDebug --warning-mode=all
+          else
+            echo "No gradlew found, using system gradle"
+            gradle assembleDebug --warning-mode=all
+          fi
+        }
         
-    - name: List build outputs (for debugging)
+    - name: List all generated files
       if: always()
       run: |
-        echo "Listing all APK files..."
+        echo "=== Searching for APK files ==="
         find tetris-android -name "*.apk" -type f || echo "No APK files found"
-        echo "Listing platforms directory..."
-        ls -la tetris-android/platforms/android/app/build/outputs/ || echo "Build outputs directory not found"
+        echo "=== Listing build outputs ==="
+        find tetris-android -path "*/build/outputs/*" -type f || echo "No build outputs found"
+        echo "=== Full platforms structure ==="
+        ls -la tetris-android/platforms/ || echo "No platforms directory"
         
-    - name: Upload Debug APK
+    - name: Upload Debug APK (primary path)
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: tetris-debug-apk
+        name: tetris-debug-apk-primary
         path: tetris-android/platforms/android/app/build/outputs/apk/debug/app-debug.apk
         
     - name: Upload any APK files found
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: all-apk-files
+        name: all-found-apks
         path: tetris-android/**/*.apk
