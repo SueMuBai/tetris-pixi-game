@@ -47,3 +47,12 @@
 # 直接打开 index.html 文件
 # 或使用本地服务器
 python -m http.server 8000
+```
+
+## 🚀 构建APK
+
+项目配置了GitHub Actions自动构建，每次推送代码都会自动生成APK文件。
+
+## 📄 许可证
+
+MIT License
