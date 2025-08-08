@@ -20,16 +20,16 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Setup Java JDK 17
+    - name: Setup Java JDK 11 (for better compatibility)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '11'
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: 33
+        api-level: 30
         target: default
         arch: x86_64
       
@@ -39,10 +39,10 @@ jobs:
         
     - name: Install required SDK packages
       run: |
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" "build-tools;30.0.3" "platform-tools"
       
-    - name: Install Cordova
-      run: npm install -g cordova@12.0.0
+    - name: Install Cordova (older stable version)
+      run: npm install -g cordova@11.1.0
       
     - name: Create Cordova project
       run: |
@@ -52,19 +52,16 @@ jobs:
         cp ../game.js www/game.js
         cp ../config-simple.xml config.xml
         
-    - name: Add Android platform
+    - name: Add Android platform (older version)
       run: |
         cd tetris-android
         echo "Adding Android platform..."
-        cordova platform add android@12.0.1 --verbose
+        cordova platform add android@10.1.2 --verbose
         
-    - name: Add required plugins
+    - name: Skip problematic plugins
       run: |
         cd tetris-android
-        echo "Adding network information plugin..."
-        cordova plugin add cordova-plugin-network-information || echo "Network plugin failed, continuing..."
-        echo "Adding whitelist plugin..."
-        cordova plugin add cordova-plugin-whitelist || echo "Whitelist plugin failed, continuing..."
+        echo "Skipping plugin installation to avoid compatibility issues"
         echo "Listing installed plugins:"
         cordova plugin ls
         
@@ -75,14 +72,14 @@ jobs:
         cat config.xml
         echo "=== Installed platforms ==="
         cordova platform ls
-        echo "=== Android platform structure ==="
-        ls -la platforms/android/ || echo "No android platform directory"
         
-    - name: Build APK
+    - name: Build APK with older tools
       run: |
         cd tetris-android
-        export GRADLE_OPTS="-Xmx4g -Dorg.gradle.daemon=false"
-        echo "Starting Cordova build..."
+        export GRADLE_OPTS="-Xmx3g -Dorg.gradle.daemon=false"
+        export ANDROID_HOME=$ANDROID_HOME
+        export JAVA_HOME=$JAVA_HOME
+        echo "Starting Cordova build with older toolchain..."
         cordova build android --debug --verbose
         
     - name: List all generated files
@@ -92,6 +89,8 @@ jobs:
         find tetris-android -name "*.apk" -type f || echo "No APK files found"
         echo "=== Listing build outputs ==="
         find tetris-android -path "*/build/outputs/*" -type f || echo "No build outputs found"
+        echo "=== Alternative APK locations ==="
+        find tetris-android -name "*.apk" -exec ls -la {} \; || echo "No APK files found anywhere"
         
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
