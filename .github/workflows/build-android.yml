@@ -20,34 +20,44 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Setup Java JDK 11 (compatible with Gradle 7.1.1)
+    - name: Setup Java JDK 11
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '11'
         
-    - name: Setup Android SDK manually
+    - name: Setup Android SDK (use existing preinstalled SDK)
       run: |
+        # 使用预安装的Android SDK
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/30.0.3
+        
         # 设置环境变量
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
         
-        # 创建目录
-        mkdir -p $ANDROID_HOME/cmdline-tools
+        # 检查现有SDK
+        echo "=== Current Android SDK structure ==="
+        ls -la $ANDROID_HOME/ || echo "Android SDK not found"
+        ls -la $ANDROID_HOME/build-tools/ || echo "Build tools not found"
         
-        # 下载并安装 command line tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
-        unzip -q commandlinetools-linux-8512546_latest.zip -d $ANDROID_HOME/cmdline-tools
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-        
-        # 接受许可证并安装必要组件
+        # 接受许可证
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        
+        # 安装必要的组件
+        echo "=== Installing required SDK components ==="
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" "build-tools;30.0.3" "platform-tools"
+        
+        # 验证安装
+        echo "=== Verifying installation ==="
+        ls -la $ANDROID_HOME/build-tools/ || echo "Build tools still not found"
+        ls -la $ANDROID_HOME/platforms/ || echo "Platforms not found"
       
-    - name: Install Cordova (older stable version)
+    - name: Install Cordova
       run: npm install -g cordova@11.1.0
       
     - name: Create Cordova project
@@ -58,33 +68,33 @@ jobs:
         cp ../game.js www/game.js
         cp ../config-simple.xml config.xml
         
-    - name: Add Android platform (older version)
+    - name: Add Android platform
       run: |
         cd tetris-android
         echo "Adding Android platform..."
         cordova platform add android@10.1.2 --verbose
         
-    - name: Verify environment
+    - name: Verify environment before build
       run: |
         echo "=== Environment Variables ==="
         echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
         echo "JAVA_HOME: $JAVA_HOME"
-        echo "PATH: $PATH"
         echo "=== Java Version ==="
         java -version
-        echo "=== Android SDK ==="
-        ls -la $ANDROID_HOME/ || echo "Android SDK not found"
-        echo "=== Config file ==="
-        cat tetris-android/config.xml
+        echo "=== Android SDK Structure ==="
+        ls -la $ANDROID_HOME/build-tools/ || echo "Build tools not found"
+        ls -la $ANDROID_HOME/platforms/ || echo "Platforms not found"
+        echo "=== Cordova Requirements ==="
+        cd tetris-android && cordova requirements android
         
-    - name: Build APK with environment override
+    - name: Build APK
       run: |
         cd tetris-android
         export GRADLE_OPTS="-Xmx3g -Dorg.gradle.daemon=false"
         export ANDROID_HOME=$ANDROID_HOME
+        export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
         export JAVA_HOME=$JAVA_HOME
-        # 设置JDK版本检查跳过
-        export SKIP_JDK_VERSION_CHECK=true
         echo "Starting Cordova build..."
         cordova build android --debug --verbose
         
