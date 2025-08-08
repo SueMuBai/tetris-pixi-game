@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>俄罗斯方块 - PixiJS版</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+        }
+
+        #gameCanvas {
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .ui-panel {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+            color: #333;
+        }
+
+        #scorePanel {
+            top: 20px;
+            right: -180px;
+            width: 150px;
+        }
+
+        #nextPanel {
+            top: 200px;
+            right: -180px;
+            width: 150px;
+            height: 120px;
+        }
+
+        .score-item {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .score-value {
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: -100px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        #mobileControls {
+            position: absolute;
+            bottom: -120px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            z-index: 1000;
+        }
+
+        .mobile-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            min-width: 50px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease;
+        }
+
+        .mobile-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+
+        .mobile-btn:active {
+            transform: scale(0.95) translateY(0);
+            background: rgba(102, 126, 234, 0.8);
+            color: white;
+        }
+
+        /* 始终显示移动端控制按钮 */
+        #mobileControls {
+            display: flex !important;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            #gameContainer {
+                transform: scale(0.8);
+            }
+
+            #instructions {
+                bottom: -80px;
+                font-size: 10px;
+            }
+
+            #mobileControls {
+                bottom: -160px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            #mobileControls {
+                bottom: -120px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="scorePanel" class="ui-panel">
+            <div class="score-item">
+                分数: <span id="score" class="score-value">0</span>
+            </div>
+            <div class="score-item">
+                等级: <span id="level" class="score-value">1</span>
+            </div>
+            <div class="score-item">
+                行数: <span id="lines" class="score-value">0</span>
+            </div>
+        </div>
+
+        <div id="nextPanel" class="ui-panel">
+            <div style="text-align: center; margin-bottom: 10px; font-size: 14px;">下一个</div>
+            <canvas id="nextCanvas" width="100" height="80"></canvas>
+        </div>
+
+        <div id="instructions">
+            ← → 移动 | ↑ 旋转 | ↓ 加速下降 | 空格 瞬间下降
+        </div>
+
+        <div id="mobileControls">
+            <button class="mobile-btn" id="btnLeft">←</button>
+            <button class="mobile-btn" id="btnRotate">↻</button>
+            <button class="mobile-btn" id="btnRight">→</button>
+            <button class="mobile-btn" id="btnDown">↓</button>
+            <button class="mobile-btn" id="btnDrop">DROP</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+    <script>
+        // 确保 PixiJS 加载完成后再启动游戏
+        window.addEventListener('load', () => {
+            if (typeof PIXI === 'undefined') {
+                console.error('PixiJS 未能正确加载');
+                document.body.innerHTML = '<div style="text-align:center;padding:50px;color:white;">PixiJS 加载失败，请检查网络连接</div>';
+                return;
+            }
+            console.log('PixiJS 版本:', PIXI.VERSION);
+            // 延迟一点启动游戏，确保DOM完全准备好
+            setTimeout(() => {
+                new TetrisGame();
+            }, 100);
+        });
+    </script>
+    <script src="game.js"></script>
+</body>
+
+</html>
