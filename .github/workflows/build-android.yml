@@ -20,45 +20,46 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Setup Java JDK 11
+    - name: Setup Java JDK 17 (required by Android SDK tools)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '11'
+        java-version: '17'
         
     - name: Setup Android SDK (use existing preinstalled SDK)
       run: |
         # 使用预安装的Android SDK
         export ANDROID_HOME=/usr/local/lib/android/sdk
         export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/30.0.3
         
         # 设置环境变量
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
         echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-        echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
         
-        # 检查现有SDK
+        # 检查现有SDK和build tools
         echo "=== Current Android SDK structure ==="
         ls -la $ANDROID_HOME/ || echo "Android SDK not found"
+        echo "=== Available build tools ==="
         ls -la $ANDROID_HOME/build-tools/ || echo "Build tools not found"
+        echo "=== Available platforms ==="
+        ls -la $ANDROID_HOME/platforms/ || echo "Platforms not found"
         
         # 接受许可证
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
         
-        # 安装必要的组件
-        echo "=== Installing required SDK components ==="
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" "build-tools;30.0.3" "platform-tools"
+        # 只安装缺失的组件（如果需要）
+        echo "=== Installing missing components if needed ==="
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" || echo "Platform android-30 installation failed or already exists"
         
-        # 验证安装
-        echo "=== Verifying installation ==="
+        # 验证最终状态
+        echo "=== Final verification ==="
         ls -la $ANDROID_HOME/build-tools/ || echo "Build tools still not found"
         ls -la $ANDROID_HOME/platforms/ || echo "Platforms not found"
       
-    - name: Install Cordova
-      run: npm install -g cordova@11.1.0
+    - name: Install Cordova (compatible version)
+      run: npm install -g cordova@12.0.0
       
     - name: Create Cordova project
       run: |
@@ -68,11 +69,11 @@ jobs:
         cp ../game.js www/game.js
         cp ../config-simple.xml config.xml
         
-    - name: Add Android platform
+    - name: Add Android platform (newer version for JDK 17)
       run: |
         cd tetris-android
         echo "Adding Android platform..."
-        cordova platform add android@10.1.2 --verbose
+        cordova platform add android@12.0.1 --verbose
         
     - name: Verify environment before build
       run: |
@@ -82,16 +83,15 @@ jobs:
         echo "JAVA_HOME: $JAVA_HOME"
         echo "=== Java Version ==="
         java -version
-        echo "=== Android SDK Structure ==="
+        echo "=== Available build tools versions ==="
         ls -la $ANDROID_HOME/build-tools/ || echo "Build tools not found"
-        ls -la $ANDROID_HOME/platforms/ || echo "Platforms not found"
         echo "=== Cordova Requirements ==="
         cd tetris-android && cordova requirements android
         
     - name: Build APK
       run: |
         cd tetris-android
-        export GRADLE_OPTS="-Xmx3g -Dorg.gradle.daemon=false"
+        export GRADLE_OPTS="-Xmx4g -Dorg.gradle.daemon=false"
         export ANDROID_HOME=$ANDROID_HOME
         export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
         export JAVA_HOME=$JAVA_HOME
