@@ -52,68 +52,38 @@ jobs:
         cp ../game.js www/game.js
         cp ../config-simple.xml config.xml
         
-    - name: Debug - List project structure before adding platform
-      run: |
-        echo "Project structure before adding platform:"
-        ls -la tetris-android/
-        echo "Config file content:"
-        cat tetris-android/config.xml
-        
-    - name: Add Android platform with error handling
+    - name: Add Android platform
       run: |
         cd tetris-android
         echo "Adding Android platform..."
-        cordova platform add android@12.0.1 --verbose || {
-          echo "First attempt failed, trying without version..."
-          cordova platform add android --verbose || {
-            echo "Second attempt failed, trying to remove and re-add..."
-            cordova platform remove android || true
-            cordova platform add android --verbose
-          }
-        }
+        cordova platform add android@12.0.1 --verbose
         
-    - name: Debug - Check platform installation
+    - name: Add required plugins
       run: |
         cd tetris-android
-        echo "Installed platforms:"
+        echo "Adding network information plugin..."
+        cordova plugin add cordova-plugin-network-information || echo "Network plugin failed, continuing..."
+        echo "Adding whitelist plugin..."
+        cordova plugin add cordova-plugin-whitelist || echo "Whitelist plugin failed, continuing..."
+        echo "Listing installed plugins:"
+        cordova plugin ls
+        
+    - name: Verify project structure
+      run: |
+        cd tetris-android
+        echo "=== Config file content ==="
+        cat config.xml
+        echo "=== Installed platforms ==="
         cordova platform ls
-        echo "Android platform structure:"
-        ls -la platforms/ || echo "No platforms directory"
+        echo "=== Android platform structure ==="
         ls -la platforms/android/ || echo "No android platform directory"
-        ls -la platforms/android/app/ || echo "No app directory"
         
-    - name: Verify gradlew exists
-      run: |
-        cd tetris-android
-        if [ -f "platforms/android/gradlew" ]; then
-          echo "✅ gradlew found at platforms/android/gradlew"
-          chmod +x platforms/android/gradlew
-        elif [ -f "platforms/android/app/gradlew" ]; then
-          echo "✅ gradlew found at platforms/android/app/gradlew"
-          chmod +x platforms/android/app/gradlew
-        else
-          echo "❌ gradlew not found, listing all gradle files:"
-          find platforms/android -name "*gradle*" -type f || echo "No gradle files found"
-          echo "Trying to generate gradlew..."
-          cd platforms/android
-          gradle wrapper || echo "Gradle wrapper generation failed"
-        fi
-        
-    - name: Build APK with enhanced error handling
+    - name: Build APK
       run: |
         cd tetris-android
         export GRADLE_OPTS="-Xmx4g -Dorg.gradle.daemon=false"
         echo "Starting Cordova build..."
-        cordova build android --debug --verbose --gradleArg="--warning-mode=all" || {
-          echo "Build failed, trying alternative approach..."
-          cd platforms/android
-          if [ -f "gradlew" ]; then
-            ./gradlew assembleDebug --warning-mode=all
-          else
-            echo "No gradlew found, using system gradle"
-            gradle assembleDebug --warning-mode=all
-          fi
-        }
+        cordova build android --debug --verbose
         
     - name: List all generated files
       if: always()
@@ -122,14 +92,12 @@ jobs:
         find tetris-android -name "*.apk" -type f || echo "No APK files found"
         echo "=== Listing build outputs ==="
         find tetris-android -path "*/build/outputs/*" -type f || echo "No build outputs found"
-        echo "=== Full platforms structure ==="
-        ls -la tetris-android/platforms/ || echo "No platforms directory"
         
-    - name: Upload Debug APK (primary path)
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: tetris-debug-apk-primary
+        name: tetris-debug-apk
         path: tetris-android/platforms/android/app/build/outputs/apk/debug/app-debug.apk
         
     - name: Upload any APK files found
