@@ -16,10 +16,10 @@
         <allow-intent href="market:*" />
     </platform>
     
-    <!-- 基本偏好设置 -->
+    <!-- 基本偏好设置 - 使用更低的SDK版本 -->
     <preference name="DisallowOverscroll" value="true" />
-    <preference name="android-minSdkVersion" value="22" />
-    <preference name="android-targetSdkVersion" value="33" />
+    <preference name="android-minSdkVersion" value="21" />
+    <preference name="android-targetSdkVersion" value="30" />
     <preference name="BackupWebStorage" value="none" />
     <preference name="Orientation" value="portrait" />
     <preference name="Fullscreen" value="false" />
