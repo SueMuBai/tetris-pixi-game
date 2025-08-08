@@ -20,26 +20,19 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Setup Java JDK 11 (for better compatibility)
+    - name: Setup Java JDK 17 (required by Android SDK)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '11'
+        java-version: '17'
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: 30
-        target: default
-        arch: x86_64
-      
-    - name: Accept Android SDK licenses
-      run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        
-    - name: Install required SDK packages
-      run: |
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" "build-tools;30.0.3" "platform-tools"
+        cmdline-tools-version: '9477386'
+        accept-android-sdk-licenses: true
+        log-accepted-android-sdk-licenses: false
+        packages: 'platforms;android-30 build-tools;30.0.3 platform-tools'
       
     - name: Install Cordova (older stable version)
       run: npm install -g cordova@11.1.0
@@ -58,13 +51,6 @@ jobs:
         echo "Adding Android platform..."
         cordova platform add android@10.1.2 --verbose
         
-    - name: Skip problematic plugins
-      run: |
-        cd tetris-android
-        echo "Skipping plugin installation to avoid compatibility issues"
-        echo "Listing installed plugins:"
-        cordova plugin ls
-        
     - name: Verify project structure
       run: |
         cd tetris-android
@@ -72,14 +58,18 @@ jobs:
         cat config.xml
         echo "=== Installed platforms ==="
         cordova platform ls
+        echo "=== Android SDK info ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "JAVA_HOME: $JAVA_HOME"
+        ls -la $ANDROID_HOME/platforms/ || echo "No platforms found"
         
-    - name: Build APK with older tools
+    - name: Build APK
       run: |
         cd tetris-android
         export GRADLE_OPTS="-Xmx3g -Dorg.gradle.daemon=false"
         export ANDROID_HOME=$ANDROID_HOME
         export JAVA_HOME=$JAVA_HOME
-        echo "Starting Cordova build with older toolchain..."
+        echo "Starting Cordova build..."
         cordova build android --debug --verbose
         
     - name: List all generated files
@@ -89,10 +79,10 @@ jobs:
         find tetris-android -name "*.apk" -type f || echo "No APK files found"
         echo "=== Listing build outputs ==="
         find tetris-android -path "*/build/outputs/*" -type f || echo "No build outputs found"
-        echo "=== Alternative APK locations ==="
-        find tetris-android -name "*.apk" -exec ls -la {} \; || echo "No APK files found anywhere"
+        echo "=== Full directory structure ==="
+        find tetris-android/platforms -name "*.apk" -exec ls -la {} \; || echo "No APK files found"
         
-    - name: Upload Debug APK
+    - name: Upload Debug APK (primary path)
       uses: actions/upload-artifact@v4
       if: success()
       with:
