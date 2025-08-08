@@ -1,4 +1,3 @@
-
 name: Build Android APK
 
 on:
@@ -56,10 +55,3 @@ jobs:
       with:
         name: tetris-debug-apk
         path: tetris-android/platforms/android/app/build/outputs/apk/debug/app-debug.apk
-        
-    - name: Upload Release APK (if exists)
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: tetris-release-apk
-        path: tetris-android/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
