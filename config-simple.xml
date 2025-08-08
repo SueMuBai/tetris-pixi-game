@@ -1,25 +1,58 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.yourname.tetris" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.suemuBai.tetris" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>俄罗斯方块</name>
     <description>
         基于PixiJS的俄罗斯方块游戏
     </description>
     <author email="your@email.com" href="http://yourwebsite.com">
-        Your Name
+        SueMuBai
     </author>
     <content src="index.html" />
+    
+    <!-- 网络访问权限 -->
     <access origin="*" />
+    <allow-navigation href="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     
+    <!-- Android平台配置 -->
     <platform name="android">
         <allow-intent href="market:*" />
+        <!-- 允许网络访问 -->
+        <access origin="*" />
+        <allow-navigation href="*" />
+        <!-- 允许加载外部资源 -->
+        <allow-navigation href="https://cdn.jsdelivr.net/*" />
     </platform>
     
+    <!-- 基本设置 -->
     <preference name="DisallowOverscroll" value="true" />
     <preference name="android-minSdkVersion" value="24" />
-    <preference name="android-targetSdkVersion" value="35" />
+    <preference name="android-targetSdkVersion" value="34" />
     <preference name="BackupWebStorage" value="none" />
     <preference name="Orientation" value="portrait" />
     <preference name="Fullscreen" value="false" />
+    
+    <!-- 启动和加载设置 -->
+    <preference name="LoadUrlTimeoutValue" value="60000" />
+    <preference name="SplashScreenDelay" value="3000" />
+    <preference name="AutoHideSplashScreen" value="true" />
+    <preference name="ShowSplashScreenSpinner" value="false" />
+    
+    <!-- 网络和安全设置 -->
+    <preference name="AllowInlineMediaPlayback" value="true" />
+    <preference name="MediaPlaybackRequiresUserAction" value="false" />
+    
+    <!-- Android特定设置 -->
+    <preference name="android-installLocation" value="auto" />
+    <preference name="AndroidLaunchMode" value="singleTop" />
+    
+    <!-- 网络安全配置 -->
+    <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+        <application android:usesCleartextTraffic="true" />
+    </edit-config>
+    
+    <!-- 权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </widget>
